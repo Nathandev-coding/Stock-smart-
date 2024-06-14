@@ -1,19 +1,38 @@
 <?php
-include_once "database.php";
-session_start();
+   include_once "database.php";
 
-if ($_SERVER["REQUEST_METHOD"]=== "POST"){
-  $_SESSION ['tauxDeChange']= filter_input(INPUT_POST , 'tauxDeChange', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
-  header("location: configuration_admin.php?msg= taux mise a jour avec succé");
-}
+   session_start();
 
-if (isset($_SESSION['caissier_email'])){
+   if (!isset ($_SESSION['admin_email'])){
+    header ("location: nnndex.php");
+   } 
+   include_once "database.php";
+   //requete pour afficher les notre de toutes les utilisateur
+   
+   $sql = "SELECT COUNT(*) AS nombre_user FROM utilisateur_tab ";
 
-}
-?>
+   $resultat = mysqli_query($conn,$sql);
+   $row = mysqli_fetch_assoc($resultat);
+   $nombre_user = $row ['nombre_user'];
 
 
+   // requete pour afficher le produit en stock 
 
+   $produit = "SELECT COUNT(*) AS nombre_produit FROM produit_tab";
+
+   $result = mysqli_query($conn,$produit);
+   $row = mysqli_fetch_assoc($result);
+   $nombre_produit = $row['nombre_produit'];
+
+   //reque pour recuperer le produit en rupture de stock
+
+   $rupture = "SELECT COUNT(*) AS n_rupture FROM produit_tab WHERE quantite <= seuil ";
+
+   $result = mysqli_query($conn,$rupture);
+   $row = mysqli_fetch_assoc($result);
+   $n_rupture = $row ['n_rupture'];
+
+   ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,20 +62,13 @@ if (isset($_SESSION['caissier_email'])){
 
   gtag('config', 'UA-94034622-3');
 </script>
-<!-- /END GA -->
-<style>
-  #form{
-    display: none;
-  }
-</style>
-
-</head>
+<!-- /END GA --></head>
 
 <body>
   <div id="app">
     <div class="main-wrapper main-wrapper-1">
       <div class="navbar-bg"></div>
-      <nav class="navbar navbar-expand-lg main-navbar" id="navbarre">
+      <nav class="navbar navbar-expand-lg main-navbar">
         <form class="form-inline mr-auto">
           <ul class="navbar-nav mr-3">
             <li><a href="#" data-toggle="sidebar" class="nav-link nav-link-lg"><i class="fas fa-bars"></i></a></li>
@@ -253,7 +265,7 @@ if (isset($_SESSION['caissier_email'])){
           </li>
           <li class="dropdown"><a href="#" data-toggle="dropdown" class="nav-link dropdown-toggle nav-link-lg nav-link-user">
             <img alt="image" src="img/avatar/avatar-1.png" class="rounded-circle mr-1">
-            <div class="d-sm-none d-lg-inline-block"><?php //echo $_SESSION['caissier_email'] ?> </div></a>
+            <div class="d-sm-none d-lg-inline-block"><?php echo $_SESSION['admin_email'] ?> </div></a>
             <div class="dropdown-menu dropdown-menu-right">
               <div class="dropdown-title">Logged in 5 min ago</div>
               <a href="features-profile.html" class="dropdown-item has-icon">
@@ -273,7 +285,7 @@ if (isset($_SESSION['caissier_email'])){
           </li>
         </ul>
       </nav>
-      <div class="main-sidebar sidebar-style-2" id="sidebare">
+      <div class="main-sidebar sidebar-style-2">
         <aside id="sidebar-wrapper">
           <div class="sidebar-brand">
             <a href="index.html">Stisla</a>
@@ -286,15 +298,22 @@ if (isset($_SESSION['caissier_email'])){
             <li class="dropdown active">
               <a href="#" class="nav-link has-dropdown"><i class="fas fa-fire"></i><span>Dashboard</span></a>
               <ul class="dropdown-menu">
-                <li class=active><a class="nav-link" href="user_space.php">General Dashboard</a></li>
+                <li class=active><a class="nav-link" href="admin_space.php">General Dashboard</a></li>
                
               </ul>
             </li>
             <li class="menu-header">Starter</li>
-            <li><a class="nav-link" href="vente.php"><i class="far fa-square"></i> <span>Vente</span></a></li>
-           
-            <li><a class="nav-link" href="analyse_user.php"><i class="far fa-square"></i> <span>Analyse</span></a></li>
-            <li><a class="nav-link" href="configuration_user.php"><i class="far fa-square"></i> <span>Configuration</span></a></li>
+            <li class="dropdown">
+              <a href="#" class="nav-link has-dropdown" data-toggle="dropdown"><i class="fas fa-columns"></i> <span>Pharmacie</span></a>
+              <ul class="dropdown-menu">
+                <li><a class="nav-link" href="pharmacie.php">Produit en stock</a></li>
+                <li><a class="nav-link" href="">Produit en rupture </a></li>
+               
+              </ul>
+            </li>
+            <li><a class="nav-link" href="utilisateur_add.php"><i class="far fa-square"></i> <span>Utilisateur</span></a></li>
+            <li><a class="nav-link" href="analyse.php"><i class="far fa-square"></i> <span>Analyse</span></a></li>
+            <li><a class="nav-link" href="configuration_admin.php"><i class="far fa-square"></i> <span>configuration</span></a></li>
             <li class="dropdown">
               <a href="#" class="nav-link has-dropdown"><i class="fas fa-th"></i> <span>Bootstrap</span></a>
               <ul class="dropdown-menu">
@@ -419,87 +438,75 @@ if (isset($_SESSION['caissier_email'])){
       <div class="main-content">
         <section class="section">
           <div class="section-header">
-            <h1>VENTE</h1>
+            <h1>Configuration</h1>
           </div>
-          <button class="button-loader btn btn-primary p-3 " id="afficherf" onclick="afficherFormulaire()"> une nouvelle vente
-              </button>
-
-          <div class="w-75 mt-3 ms-5 shadow" id="form">
-            <div class="card" id="">
-                <div class="card-header text-center bg-primary text-white">
-                  <h2>EFFECTUER LA VENTE</h2>
-                </div>
-
-                <div class="card-body">
-                    <form action="" method="post" id="formVentes">
+          
+          <div class="section-body">
+            <h2 class="section-title">Tout sur le paramettre Generaux</h2>
+            <p class="section-lead">
+              Vous pouvez ajuster tous les parametres generaux ici
+            </p>
+          </div>
+          <div class="row">
+          <div class="col-md-8">
+              
+                  <div class="card" id="settings-card">
+                    <div class="card-header">
+                      <h4>configuration Generale</h4>
+                    </div>
+                    <div class="card-body">
+                     
+                     
+                      <form action="vente.php" method="post">
+                      
                        
-                        <div class="row">
-                            <div class="col input-group mb-3">
-                                <span class="input-group-text">numero du client</span>
-                                <input type="number" class="form-control" placeholder="numero du client" aria-describedby="basic-addon1">
-                            </div>
-                            <div class="col input-group mb-3">
-                                <span class="input-group-text">date </span>
-                                <input type="date" class="form-control" placeholder="numero facture" aria-describedby="basic-addon1">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col input-group mb-3">
-                                <span class="input-group-text">nom de l'utilisateure</span>
-                                <input type="text" class="form-control" value="" aria-describedby="basic-addon1" readonly>
-                            </div>
-                            </div>
-                            <?php   
+                  <div class="row">
+                          <div class="col form-group"> 
+
+                        <?php
+                           if (isset($_GET['msg'])){
+                            $msg = $_GET['msg'];
+                            echo '   <div class="alert alert-success alert-dismissible show fade">
+                           <div class="alert-body">
+                            <button class="close" data-dismiss="alert">
+                            <span>&times;</span>
+                          </button>
+                          '.$msg.'
+                          </div>
+                          </div>';
+                          }
+                        ?>
+                            <label for="site-title" class="form-control-label col-sm-6">Changer le taux </label>
+
+
+                          <input type="text" required  name="tauxDeChange" class="form-control col-6" id="site-title" placeholder="saissez le taux">
+                          
+                          <div class="col mt-2">
+                          <?php   
                                 if (isset($_SESSION['tauxDeChange'])) {
-                            echo "<h3 class='text-danger'>Taux Dollar: " . $_SESSION['tauxDeChange'] . " fc</h3>";
+                            echo "<h5 class='text-danger'>Taux : " . $_SESSION['tauxDeChange'] . " fc</h5>";
                                 } else {
                                  echo "<h3>Taux de Change du Dollar: --</h3>";
                                    }
                             ?>
-
-              
-                       
-                            <table class="table" id="tableauVente">
-                              <tr>
-                              <th>Article</th>
-                                 <th>Prix Unit.</th>
-                                 <th>Quantité</th>
-                                 <th>Total</th>
-                                  </tr>
-                                </table>
-                     <div class="row">
-                        <div class="col but block float-start w-25 border border-end-0 p-2">
-                            <div class="mb-3 mt-4">
-                               <input type="submit" value="enregistrer" class="btn btn-primary">
                             </div>
-                            <div class="mb-3">
-                            <button class="btn btn-success " type="button" onclick="ajouterArticle()">Ajouter un produit</button>
-                            </div>
-                        </div>
+                        
 
-                       <div class=" col d-block float-end w-75 border p-3">
-                        <div class="mb-3">
-                        <p>Total HT: <span id="totalHT">0.00</span> €</p>
-                        </div>
-                        <div class="mb-3">
-                        <p>TVA (16%): <span id="tva">0.00</span> €</p>
-                        </div>
-                        <div class="mb w-100 text-white bg-primary">
-                        <p>Total TTC: <span class="ms-3" id="totalTTC">0.00</span> €</p>
-                        </div>
-                       </div>
-                      </div>
-                    </form>
-                </div>
-                   </div>
-                   </div>
-               <div class="container position-relative mt-5 mb-3  d-flex  p-1   justify-content-between" >
+                          <div class="col mt-3">
+                          
+                            
+                             <button type="submit" class="btn btn-primary">Mettre ajour le taux</button>
+                           
+                         </div>
+                  </div><hr>
+                      
+                
+                  </div>
+               
+              </div>
+          </div>
            
-                <div> 
-           </div> 
-        </div>
- 
-          
+    
 
         
           
@@ -540,56 +547,5 @@ if (isset($_SESSION['caissier_email'])){
   <!-- Template JS File -->
   <script src="js/scripts.js"></script>
   <script src="js/custom.js"></script>
-
-  <script>
-// Fonction pour ajouter une nouvelle ligne d'article
-function ajouterArticle() {
-  var tableau = document.getElementById('tableauVente');
-  var nouvelleLigne = tableau.insertRow(-1);
-  var celluleArticle = nouvelleLigne.insertCell(0);
-  var cellulePrix = nouvelleLigne.insertCell(1);
-  var celluleQuantite = nouvelleLigne.insertCell(2);
-  var celluleTotal = nouvelleLigne.insertCell(3);
-
-  celluleArticle.innerHTML = '<input type="text" class="form-control" name="article[]">';
-  cellulePrix.innerHTML = '<input type="number" class="form-control" name="prix[]" step="0.01" onchange="calculerTotal()">';
-  celluleQuantite.innerHTML = '<input type="number" class="form-control" name="quantite[]" value="1" onchange="calculerTotal()">';
-  celluleTotal.innerHTML = '<input type="text" class="form-control" name="total[]" readonly>';
-}
-
-// Fonction pour calculer les totaux
-function calculerTotal() {
-  var tableau = document.getElementById('tableauVente');
-  var totalHT = 0;
-  for (var i = 1; i < tableau.rows.length; i++) {
-    var prix = parseFloat(tableau.rows[i].cells[1].children[0].value) || 0;
-    var quantite = parseFloat(tableau.rows[i].cells[2].children[0].value) || 0;
-    var totalLigne = prix * quantite;
-    tableau.rows[i].cells[3].children[0].value = totalLigne.toFixed(2);
-    totalHT += totalLigne;
-  }
-  var tva = totalHT * 0.16; // TVA de 20%
-  var totalTTC = totalHT + tva;
-  document.getElementById('totalHT').textContent = totalHT.toFixed(2);
-  document.getElementById('tva').textContent = tva.toFixed(2);
-  document.getElementById('totalTTC').textContent = totalTTC.toFixed(2);
-}
-
-
-
-/// fonction pour affiche le forlmulaire de vente
-
-function afficherFormulaire(){
-  var formulaire = document.getElementById('form');
- 
-  if (formulaire.style.display === "none"){
-    formulaire.style.display = "block";
- 
-  }else{
-    formulaire.style.display = "none";
-  }
-
-}
-</script>
 </body>
 </html>
